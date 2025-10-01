@@ -52,7 +52,7 @@
                         <input type="text" id="name" placeholder="Uw Naam (optioneel)" maxlength="50"
                                class="w-full p-3 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150" required>
                         
-                        <textarea id="message-text" placeholder="Uw Bericht (max 200 tekens)" maxlength="200" rows="4"
+                        <textarea type="text" id="message-text" placeholder="Uw Bericht (max 200 tekens)" maxlength="200" rows="4"
                                   class="w-full p-3 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 resize-none" required></textarea>
                         
                         <button type="submit" id="submit-button"
@@ -94,9 +94,10 @@
 
     <!-- Firebase SDK's -->
     <script type="module">
-        // Importeer de Realtime Database SDK's in plaats van Firestore
+        // Importeer de Realtime Database SDK's en Auth
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // Let op: getDatabase, ref, push, onValue zijn voor Realtime Database
         import { getDatabase, ref, push, onValue, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         
         // Laad de QR Code bibliotheek
@@ -104,23 +105,33 @@
         
         // --- Firebase Initialisatie en Auth Setup ---
         
-        // Globale variabelen (MANDATORY gebruik in Canvas)
+        // Globale variabelen (Canvas-specifiek)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // De door jou verstrekte, correcte Firebase configuratie
+        const firebaseConfig = {
+          apiKey: "AIzaSyAoelqc3Egk7_aIdH9_RmlSmiIb7KtOqzs", // JOUW ECHTE SLEUTEL
+          authDomain: "logboek-actie-protest.firebaseapp.com",
+          projectId: "logboek-actie-protest",
+          storageBucket: "logboek-actie-protest.firebasestorage.app",
+          messagingSenderId: "266224047697",
+          appId: "1:266224047697:web:9dbb766ff3e3a092ee0a70"
+        };
 
-        if (!firebaseConfig) {
-            console.error("Firebase configuratie is niet gevonden. Kan niet initialiseren.");
-            document.getElementById('loading-indicator').textContent = "Fout: Firebase niet geconfigureerd.";
+
+        // Valideer configuratie
+        if (!firebaseConfig || !firebaseConfig.apiKey) {
+            console.error("FATALE FOUT: Firebase configuratie mist de API sleutel. De applicatie kan niet initialiseren.");
+            document.getElementById('loading-indicator').innerHTML = "FATALE FOUT: Configuratie ontbreekt.";
             document.getElementById('submit-button').disabled = true;
-            return;
+            return; // Stop de executie in geval van een fatale fout
         }
 
         // Activeer logging voor debuggen
         setLogLevel('debug');
 
         const app = initializeApp(firebaseConfig);
-        // Gebruik getDatabase() in plaats van getFirestore()
         const db = getDatabase(app); 
         const auth = getAuth(app);
 
@@ -173,7 +184,7 @@
                 return;
             }
 
-            // Gebruik 'messages' referentie
+            // Gebruik 'messages' referentie. Dit pad komt overeen met de regels die je hebt gepubliceerd.
             const messagesRef = ref(db, 'messages');
 
             // onValue luistert naar wijzigingen in de data
@@ -186,13 +197,13 @@
                     snapshot.forEach((childSnapshot) => {
                         const data = childSnapshot.val();
                         // Zorg ervoor dat de data er is en converteer de timestamp
-                        if (data.timestamp && data.message) {
+                        if (data && data.timestamp && data.message) {
                             messages.push({
                                 id: childSnapshot.key, // Dit is de unieke push key
                                 name: data.name || 'Anoniem',
                                 message: data.message,
                                 timestamp: new Date(data.timestamp), // Timestamp is al een nummer/string
-                                userId: data.userId // Optioneel
+                                userId: data.userId 
                             });
                         }
                     });
@@ -242,9 +253,6 @@
                 `;
                 listContainer.appendChild(messageElement);
             });
-            
-            // Scroll naar de bovenkant wanneer nieuwe berichten binnenkomen (optioneel: scroll naar beneden voor chat-stijl)
-            // listContainer.scrollTop = 0;
         }
 
         // --- Bericht Opslaan (Verzenden) (Realtime Database) ---
@@ -273,7 +281,6 @@
             submitButton.textContent = 'Bezig met plaatsen...';
 
             try {
-                // Gebruik de 'messages' referentie
                 const messagesRef = ref(db, 'messages');
                 
                 // Voeg het bericht toe aan de Realtime Database met push()
@@ -285,7 +292,7 @@
                     userId: currentUserId 
                 });
 
-                nameInput.value = ''; // Naam mag blijven staan als je wilt, maar we maken hem leeg
+                nameInput.value = ''; 
                 messageInput.value = '';
                 showModal("Succes!", "Je bericht is succesvol geplaatst.");
                 
@@ -304,12 +311,10 @@
          * Genereert een QR-code voor de huidige URL van de pagina.
          */
         function generateQrCode() {
-            // Gebruik de URL van de huidige pagina. Na de implementatie zal dit de Render-URL zijn.
             const url = window.location.href; 
             const canvas = document.getElementById('qrcode');
             
             try {
-                // Maak een nieuwe QRious instantie aan (vereist de qrious.min.js import)
                 new QRious({
                     element: canvas,
                     value: url,
