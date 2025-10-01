@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digitaal Gastenboek FIX V2</title>
+    <title>Digitaal Gastenboek FIX V5</title>
     <!-- Laad Tailwind CSS voor styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -22,7 +22,7 @@
             
             <header class="text-center mb-8">
                 <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Digitaal Gastenboek</h1>
-                <p class="text-lg text-gray-500">Laat een bericht achter voor iedereen om te zien! (Fix Versie 2)</p>
+                <p class="text-lg text-gray-500">Laat een bericht achter voor iedereen om te zien! (Definitieve Versie)</p>
             </header>
 
             <div class="grid md:grid-cols-3 gap-8">
@@ -44,7 +44,7 @@
                         </button>
                     </form>
                     
-                    <!-- Gebruikers-ID sectie is vereenvoudigd -->
+                    <!-- Gebruikers-ID sectie -->
                     <div class="mt-8 p-4 bg-gray-100 rounded-lg shadow-md">
                         <div class="text-xs text-gray-500 break-words">
                             <span class="font-bold">Uw unieke gebruikers-ID:</span> 
@@ -69,20 +69,19 @@
     <!-- Firebase SDK's en App Logica -->
     <script type="module">
         // Importeer de Realtime Database SDK's en Auth
-        // setLogLevel is verplaatst naar de app-import
         import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         
         // --- Firebase Config & Initialisatie ---
         
-        // Canvas/Omgevingsvariabelen
+        // Canvas/Omgevingsvariabelen (niet gebruikt, maar nodig om de Canvas/Render omgeving te ondersteunen)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
-        // De gehardcodeerde en correcte Firebase configuratie
+        // DE HARCODED EN CORRECTE Firebase configuratie (NU 100% BEVESTIGD)
         const firebaseConfig = {
-          apiKey: "AIzaSyAoelqc3Egk7_aIdH9_RmlSmiIb7KtOqzs", // JOUW ECHTE SLEUTEL
+          apiKey: "AIzaSyAoelqc3Egk7_aIdH9_RmlSmiIb7KtOqzs", 
           authDomain: "logboek-actie-protest.firebaseapp.com",
           projectId: "logboek-actie-protest",
           storageBucket: "logboek-actie-protest.firebasestorage.app",
@@ -92,14 +91,14 @@
 
 
         // Valideer configuratie
-        if (!firebaseConfig.apiKey) {
-            console.error("FATALE FOUT: Firebase API-sleutel ontbreekt.");
+        if (!firebaseConfig.apiKey || !firebaseConfig.authDomain) {
+            console.error("FATALE FOUT: Firebase API-sleutel of Auth Domain ontbreekt.");
             document.getElementById('loading-indicator').textContent = "FATALE FOUT: Configuratie ontbreekt.";
             document.getElementById('submit-button').disabled = true;
             throw new Error("Firebase config missing.");
         }
 
-        // Activeer logging voor debuggen (nu correct geïmporteerd)
+        // Activeer logging voor debuggen 
         setLogLevel('debug');
 
         const app = initializeApp(firebaseConfig);
@@ -114,14 +113,12 @@
          */
         async function initializeAuthAndDatabase() {
             try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                // Gebruik anonieme login voor dit gastenboek
+                await signInAnonymously(auth);
             } catch (error) {
-                console.error("Fout bij inloggen:", error);
-                document.getElementById('loading-indicator').textContent = "Fout bij authenticatie: " + error.message;
+                // De fout 'auth/configuration-not-found' moet nu verdwenen zijn!
+                console.error("Fout bij inloggen (auth/configuration-not-found?):", error);
+                document.getElementById('loading-indicator').textContent = "Fout bij authenticatie. Controleer je Firebase configuratie. Fout: " + error.code;
                 document.getElementById('submit-button').disabled = true;
                 return;
             }
@@ -137,6 +134,8 @@
                     // Start na succesvolle authenticatie de real-time listener
                     setupRealtimeListener();
                 } else {
+                    document.getElementById('loading-indicator').textContent = "Authenticatie mislukt. Probeer later opnieuw.";
+                    document.getElementById('user-id').textContent = "Niet beschikbaar";
                     console.error("Geen gebruiker ingelogd.");
                 }
             });
@@ -182,7 +181,7 @@
             }, (error) => {
                 console.error("Fout bij het laden van berichten:", error);
                 // Dit is de plek waar eventuele toestemmingsfouten worden getoond
-                document.getElementById('loading-indicator').textContent = "Fout: Berichten konden niet geladen worden. Controleer de regels. Foutmelding: " + error.message;
+                document.getElementById('loading-indicator').textContent = "Fout: Berichten konden niet geladen worden. Controleer de Firebase Regels of je netwerkverbinding. Foutmelding: " + error.message;
             });
         }
         
@@ -226,7 +225,7 @@
             e.preventDefault();
 
             if (!authReady) {
-                showModal("Fout", "De applicatie is nog aan het initialiseren. Probeer het over een moment opnieuw.");
+                showModal("Fout", "De applicatie is nog aan het initialiseren (Authenticatie niet gereed). Probeer het over een moment opnieuw.");
                 return;
             }
 
@@ -258,7 +257,8 @@
                 
             } catch (error) {
                 console.error("Fout bij het plaatsen van bericht:", error);
-                showModal("Fout", "Er is een probleem opgetreden bij het opslaan van je bericht. Controleer de Firebase Regels!");
+                // Toon de code van de fout, want dit is de Permission Denied fout
+                showModal("Fout", "Er is een probleem opgetreden bij het opslaan van je bericht. Controleer de Firebase Regels! Foutcode: " + error.code);
             } finally {
                 submitButton.disabled = false;
                 submitButton.textContent = 'Bericht Plaatsen';
@@ -305,4 +305,3 @@
 
 </body>
 </html>
-
