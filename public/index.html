@@ -94,9 +94,10 @@
 
     <!-- Firebase SDK's -->
     <script type="module">
+        // Importeer de Realtime Database SDK's in plaats van Firestore
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getDatabase, ref, push, onValue, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         
         // Laad de QR Code bibliotheek
         import 'https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js';
@@ -119,14 +120,15 @@
         setLogLevel('debug');
 
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        // Gebruik getDatabase() in plaats van getFirestore()
+        const db = getDatabase(app); 
         const auth = getAuth(app);
 
         let currentUserId = null;
         let authReady = false;
 
         /**
-         * Authenticatie en Firestore initialisatie.
+         * Authenticatie en Database initialisatie.
          * Zorgt ervoor dat de gebruiker is ingelogd (anoniem of met token) en haalt de UID op.
          */
         async function initializeAuthAndDatabase() {
@@ -160,14 +162,7 @@
             });
         }
         
-        // --- Firestore Data Pad ---
-        
-        // Publiek pad voor gedeelde gegevens: /artifacts/{appId}/public/data/guestbook_messages
-        const getCollectionPath = () => {
-            return `artifacts/${appId}/public/data/guestbook_messages`;
-        };
-
-        // --- Real-time Berichten Lezen ---
+        // --- Real-time Berichten Lezen (Realtime Database) ---
 
         /**
          * Stelt de real-time listener in voor de berichten.
@@ -178,24 +173,31 @@
                 return;
             }
 
-            const messagesCollection = collection(db, getCollectionPath());
-            const q = query(messagesCollection); // Geen orderBy() gebruiken om index-fouten te vermijden
+            // Gebruik 'messages' referentie
+            const messagesRef = ref(db, 'messages');
 
-            onSnapshot(q, (snapshot) => {
+            // onValue luistert naar wijzigingen in de data
+            onValue(messagesRef, (snapshot) => {
                 const messages = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    // Zorg ervoor dat de data er is en converteer de timestamp
-                    if (data.timestamp && data.message) {
-                        messages.push({
-                            id: doc.id,
-                            name: data.name || 'Anoniem',
-                            message: data.message,
-                            timestamp: data.timestamp.toDate ? data.timestamp.toDate() : new Date(data.timestamp),
-                            userId: data.userId // Optioneel
-                        });
-                    }
-                });
+                
+                // Controleer of er data is
+                if (snapshot.exists()) {
+                    // Realtime Database data is een object, we itereren door de keys
+                    snapshot.forEach((childSnapshot) => {
+                        const data = childSnapshot.val();
+                        // Zorg ervoor dat de data er is en converteer de timestamp
+                        if (data.timestamp && data.message) {
+                            messages.push({
+                                id: childSnapshot.key, // Dit is de unieke push key
+                                name: data.name || 'Anoniem',
+                                message: data.message,
+                                timestamp: new Date(data.timestamp), // Timestamp is al een nummer/string
+                                userId: data.userId // Optioneel
+                            });
+                        }
+                    });
+                }
+
 
                 // Sorteer berichten lokaal op tijd (nieuwste eerst)
                 messages.sort((a, b) => b.timestamp - a.timestamp);
@@ -203,7 +205,7 @@
                 renderMessages(messages);
             }, (error) => {
                 console.error("Fout bij het laden van berichten:", error);
-                document.getElementById('loading-indicator').textContent = "Fout: Berichten konden niet geladen worden.";
+                document.getElementById('loading-indicator').textContent = "Fout: Berichten konden niet geladen worden. Controleer de regels.";
             });
         }
         
@@ -245,7 +247,7 @@
             // listContainer.scrollTop = 0;
         }
 
-        // --- Bericht Opslaan (Verzenden) ---
+        // --- Bericht Opslaan (Verzenden) (Realtime Database) ---
 
         document.getElementById('message-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -271,13 +273,15 @@
             submitButton.textContent = 'Bezig met plaatsen...';
 
             try {
-                const messagesCollection = collection(db, getCollectionPath());
+                // Gebruik de 'messages' referentie
+                const messagesRef = ref(db, 'messages');
                 
-                // Voeg het bericht toe aan Firestore
-                await addDoc(messagesCollection, {
+                // Voeg het bericht toe aan de Realtime Database met push()
+                await push(messagesRef, {
                     name: name,
                     message: messageText,
-                    timestamp: new Date(),
+                    // Realtime Database gebruikt een JS timestamp (milliseconds since epoch)
+                    timestamp: new Date().getTime(), 
                     userId: currentUserId 
                 });
 
