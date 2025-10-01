@@ -1,0 +1,13 @@
+node_modules/
+messages.db
+.env
+# Verwijder node_modules uit Git's index (maar niet van je computer)
+git rm -r --cached node_modules
+
+# Voeg alles opnieuw toe inclusief .gitignore
+git add .
+
+# Commit met een duidelijke boodschap
+git commit -m "Voeg .gitignore toe en verwijder node_modules uit repo"
+
+git push -u origin main
