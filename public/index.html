@@ -3,34 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Openbaar Digitaal Gastenboek</title>
-    <!-- Laad Tailwind CSS voor een snelle, responsieve styling -->
+    <title>Digitaal Gastenboek FIX</title>
+    <!-- Laad Tailwind CSS voor styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Aangepaste styling voor de scrollbalk in de berichtenlijst */
-        #message-list {
-            max-height: 60vh; /* Maximale hoogte voor de scrollbare lijst */
-            overflow-y: auto;
-            scroll-behavior: smooth;
-            border-radius: 0.75rem; /* rounded-xl */
-            padding-right: 0.5rem; /* Zorgt voor ruimte naast de scrollbar */
-        }
-        /* Styling voor WebKit browsers (Chrome, Safari) */
-        #message-list::-webkit-scrollbar {
-            width: 8px;
-        }
-        #message-list::-webkit-scrollbar-thumb {
-            background-color: #cbd5e1; /* gray-300 */
-            border-radius: 4px;
-        }
-        #message-list::-webkit-scrollbar-track {
-            background: #f1f5f9; /* gray-100 */
-        }
-        /* Gebruik het Inter lettertype */
-        body {
-            font-family: "Inter", sans-serif;
-            background-color: #f8fafc; /* Slate-50 */
-        }
+        /* Aangepaste styling */
+        #message-list { max-height: 60vh; overflow-y: auto; scroll-behavior: smooth; border-radius: 0.75rem; padding-right: 0.5rem; }
+        #message-list::-webkit-scrollbar { width: 8px; }
+        #message-list::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+        #message-list::-webkit-scrollbar-track { background: #f1f5f9; }
+        body { font-family: "Inter", sans-serif; background-color: #f8fafc; }
     </style>
 </head>
 <body>
@@ -40,7 +22,7 @@
             
             <header class="text-center mb-8">
                 <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Digitaal Gastenboek</h1>
-                <p class="text-lg text-gray-500">Laat een bericht achter voor iedereen om te zien!</p>
+                <p class="text-lg text-gray-500">Laat een bericht achter voor iedereen om te zien! (Fix Versie)</p>
             </header>
 
             <div class="grid md:grid-cols-3 gap-8">
@@ -62,17 +44,9 @@
                         </button>
                     </form>
                     
-                    <!-- QR Code & Gebruikers-ID sectie -->
+                    <!-- Gebruikers-ID sectie is vereenvoudigd -->
                     <div class="mt-8 p-4 bg-gray-100 rounded-lg shadow-md">
-                        <h3 class="text-xl font-semibold text-gray-700 mb-3">Deel dit Logboek</h3>
-                        
-                        <div id="qrcode-container" class="flex justify-center p-3 mb-4 bg-white rounded-lg">
-                            <!-- QR Code wordt hier ingevoegd -->
-                            <canvas id="qrcode" class="w-40 h-40"></canvas>
-                        </div>
-                        <p class="text-sm text-gray-600 mb-2">Scan de code of deel de link met vrienden.</p>
-                        
-                        <div class="text-xs text-gray-500 mt-4 break-words">
+                        <div class="text-xs text-gray-500 break-words">
                             <span class="font-bold">Uw unieke gebruikers-ID:</span> 
                             <span id="user-id">Laden...</span>
                         </div>
@@ -92,24 +66,20 @@
         </div>
     </div>
 
-    <!-- Firebase SDK's -->
+    <!-- Firebase SDK's en App Logica -->
     <script type="module">
         // Importeer de Realtime Database SDK's en Auth
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // Let op: getDatabase, ref, push, onValue zijn voor Realtime Database
         import { getDatabase, ref, push, onValue, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         
-        // Laad de QR Code bibliotheek
-        import 'https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js';
+        // --- Firebase Config & Initialisatie ---
         
-        // --- Firebase Initialisatie en Auth Setup ---
-        
-        // Globale variabelen (Canvas-specifiek)
+        // Canvas/Omgevingsvariabelen
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
-        // De door jou verstrekte, correcte Firebase configuratie
+        // De gehardcodeerde en correcte Firebase configuratie (vervangt de foutieve helper-functie)
         const firebaseConfig = {
           apiKey: "AIzaSyAoelqc3Egk7_aIdH9_RmlSmiIb7KtOqzs", // JOUW ECHTE SLEUTEL
           authDomain: "logboek-actie-protest.firebaseapp.com",
@@ -120,12 +90,12 @@
         };
 
 
-        // Valideer configuratie
-        if (!firebaseConfig || !firebaseConfig.apiKey) {
-            console.error("FATALE FOUT: Firebase configuratie mist de API sleutel. De applicatie kan niet initialiseren.");
-            document.getElementById('loading-indicator').innerHTML = "FATALE FOUT: Configuratie ontbreekt.";
+        // Valideer configuratie (zonder de 'illegal return'!)
+        if (!firebaseConfig.apiKey) {
+            console.error("FATALE FOUT: Firebase API-sleutel ontbreekt.");
+            document.getElementById('loading-indicator').textContent = "FATALE FOUT: Configuratie ontbreekt.";
             document.getElementById('submit-button').disabled = true;
-            return; // Stop de executie in geval van een fatale fout
+            throw new Error("Firebase config missing.");
         }
 
         // Activeer logging voor debuggen
@@ -140,7 +110,6 @@
 
         /**
          * Authenticatie en Database initialisatie.
-         * Zorgt ervoor dat de gebruiker is ingelogd (anoniem of met token) en haalt de UID op.
          */
         async function initializeAuthAndDatabase() {
             try {
@@ -151,7 +120,7 @@
                 }
             } catch (error) {
                 console.error("Fout bij inloggen:", error);
-                document.getElementById('loading-indicator').textContent = "Fout bij authenticatie.";
+                document.getElementById('loading-indicator').textContent = "Fout bij authenticatie: " + error.message;
                 document.getElementById('submit-button').disabled = true;
                 return;
             }
@@ -164,9 +133,8 @@
                     authReady = true;
                     console.log("Gebruiker ingelogd:", currentUserId);
                     
-                    // Start na succesvolle authenticatie de real-time listener en QR-code generatie
+                    // Start na succesvolle authenticatie de real-time listener
                     setupRealtimeListener();
-                    generateQrCode();
                 } else {
                     console.error("Geen gebruiker ingelogd.");
                 }
@@ -184,31 +152,27 @@
                 return;
             }
 
-            // Gebruik 'messages' referentie. Dit pad komt overeen met de regels die je hebt gepubliceerd.
+            // Realtime DB pad: 'messages'
             const messagesRef = ref(db, 'messages');
 
             // onValue luistert naar wijzigingen in de data
             onValue(messagesRef, (snapshot) => {
                 const messages = [];
                 
-                // Controleer of er data is
                 if (snapshot.exists()) {
-                    // Realtime Database data is een object, we itereren door de keys
                     snapshot.forEach((childSnapshot) => {
                         const data = childSnapshot.val();
-                        // Zorg ervoor dat de data er is en converteer de timestamp
                         if (data && data.timestamp && data.message) {
                             messages.push({
-                                id: childSnapshot.key, // Dit is de unieke push key
+                                id: childSnapshot.key, 
                                 name: data.name || 'Anoniem',
                                 message: data.message,
-                                timestamp: new Date(data.timestamp), // Timestamp is al een nummer/string
+                                timestamp: new Date(data.timestamp), 
                                 userId: data.userId 
                             });
                         }
                     });
                 }
-
 
                 // Sorteer berichten lokaal op tijd (nieuwste eerst)
                 messages.sort((a, b) => b.timestamp - a.timestamp);
@@ -222,11 +186,10 @@
         
         /**
          * Render de berichtenlijst in de DOM.
-         * @param {Array<Object>} messages - De gesorteerde lijst met berichten.
          */
         function renderMessages(messages) {
             const listContainer = document.getElementById('message-list');
-            listContainer.innerHTML = ''; // Maak de lijst leeg
+            listContainer.innerHTML = ''; 
 
             if (messages.length === 0) {
                 listContainer.innerHTML = '<p class="text-center text-gray-500 p-4 bg-gray-50 rounded-lg">Er zijn nog geen berichten. Wees de eerste!</p>';
@@ -255,7 +218,7 @@
             });
         }
 
-        // --- Bericht Opslaan (Verzenden) (Realtime Database) ---
+        // --- Bericht Opslaan (Verzenden) ---
 
         document.getElementById('message-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -266,11 +229,8 @@
             }
 
             const submitButton = document.getElementById('submit-button');
-            const nameInput = document.getElementById('name');
-            const messageInput = document.getElementById('message-text');
-
-            const name = nameInput.value.trim() || 'Anoniem';
-            const messageText = messageInput.value.trim();
+            const name = document.getElementById('name').value.trim() || 'Anoniem';
+            const messageText = document.getElementById('message-text').value.trim();
 
             if (!messageText) {
                 showModal("Fout", "Het bericht mag niet leeg zijn.");
@@ -283,54 +243,26 @@
             try {
                 const messagesRef = ref(db, 'messages');
                 
-                // Voeg het bericht toe aan de Realtime Database met push()
                 await push(messagesRef, {
                     name: name,
                     message: messageText,
-                    // Realtime Database gebruikt een JS timestamp (milliseconds since epoch)
                     timestamp: new Date().getTime(), 
                     userId: currentUserId 
                 });
 
-                nameInput.value = ''; 
-                messageInput.value = '';
+                document.getElementById('name').value = ''; 
+                document.getElementById('message-text').value = '';
                 showModal("Succes!", "Je bericht is succesvol geplaatst.");
                 
             } catch (error) {
                 console.error("Fout bij het plaatsen van bericht:", error);
-                showModal("Fout", "Er is een probleem opgetreden bij het opslaan van je bericht. " + error.message);
+                showModal("Fout", "Er is een probleem opgetreden bij het opslaan van je bericht. Controleer de Firebase Regels!");
             } finally {
                 submitButton.disabled = false;
                 submitButton.textContent = 'Bericht Plaatsen';
             }
         });
 
-        // --- QR Code Generatie ---
-
-        /**
-         * Genereert een QR-code voor de huidige URL van de pagina.
-         */
-        function generateQrCode() {
-            const url = window.location.href; 
-            const canvas = document.getElementById('qrcode');
-            
-            try {
-                new QRious({
-                    element: canvas,
-                    value: url,
-                    size: 160,
-                    level: 'H',
-                    padding: 0,
-                    background: 'white',
-                    foreground: '#1e40af' // blue-700
-                });
-            } catch (e) {
-                console.error("Fout bij het genereren van de QR-code:", e);
-                // Valback: toon een link als de QR-code niet werkt
-                canvas.parentElement.innerHTML = `<p class="text-sm text-red-500">Kan QR-code niet genereren. Gebruik deze link:</p><a href="${url}" target="_blank" class="text-blue-500 text-sm break-all">${url}</a>`;
-            }
-        }
-        
         // --- Utility Functies (Custom Modal, Sanitizer) ---
         
         /** * Voegt een eenvoudige modale dialoog toe aan de body voor meldingen (in plaats van alert()).
@@ -342,7 +274,7 @@
             const modalHtml = `
                 <div id="custom-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center p-4 z-50 transition-opacity duration-300">
                     <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm transform scale-100 transition-transform duration-300">
-                        <h3 class="text-xl font-bold ${title === 'Fout' ? 'text-red-600' : 'text-green-600'} mb-3">${title}</h3>
+                        <h3 class="text-xl font-bold ${title.startsWith('Fout') ? 'text-red-600' : 'text-green-600'} mb-3">${title}</h3>
                         <p class="text-gray-700 mb-4">${message}</p>
                         <button onclick="document.getElementById('custom-modal').remove()"
                                 class="w-full py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition duration-150">
@@ -355,7 +287,7 @@
         }
         
         /**
-         * Basis HTML-sanitizer om XSS-aanvallen te voorkomen.
+         * Basis HTML-sanitizer.
          */
         function sanitizeHTML(str) {
             if (typeof str !== 'string') return '';
@@ -371,3 +303,4 @@
 
 </body>
 </html>
+
