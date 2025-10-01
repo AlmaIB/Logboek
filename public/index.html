@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digitaal Gastenboek FIX</title>
+    <title>Digitaal Gastenboek FIX V2</title>
     <!-- Laad Tailwind CSS voor styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -22,7 +22,7 @@
             
             <header class="text-center mb-8">
                 <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Digitaal Gastenboek</h1>
-                <p class="text-lg text-gray-500">Laat een bericht achter voor iedereen om te zien! (Fix Versie)</p>
+                <p class="text-lg text-gray-500">Laat een bericht achter voor iedereen om te zien! (Fix Versie 2)</p>
             </header>
 
             <div class="grid md:grid-cols-3 gap-8">
@@ -69,9 +69,10 @@
     <!-- Firebase SDK's en App Logica -->
     <script type="module">
         // Importeer de Realtime Database SDK's en Auth
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        // setLogLevel is verplaatst naar de app-import
+        import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getDatabase, ref, push, onValue, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+        import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         
         // --- Firebase Config & Initialisatie ---
         
@@ -79,7 +80,7 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
-        // De gehardcodeerde en correcte Firebase configuratie (vervangt de foutieve helper-functie)
+        // De gehardcodeerde en correcte Firebase configuratie
         const firebaseConfig = {
           apiKey: "AIzaSyAoelqc3Egk7_aIdH9_RmlSmiIb7KtOqzs", // JOUW ECHTE SLEUTEL
           authDomain: "logboek-actie-protest.firebaseapp.com",
@@ -90,7 +91,7 @@
         };
 
 
-        // Valideer configuratie (zonder de 'illegal return'!)
+        // Valideer configuratie
         if (!firebaseConfig.apiKey) {
             console.error("FATALE FOUT: Firebase API-sleutel ontbreekt.");
             document.getElementById('loading-indicator').textContent = "FATALE FOUT: Configuratie ontbreekt.";
@@ -98,7 +99,7 @@
             throw new Error("Firebase config missing.");
         }
 
-        // Activeer logging voor debuggen
+        // Activeer logging voor debuggen (nu correct geïmporteerd)
         setLogLevel('debug');
 
         const app = initializeApp(firebaseConfig);
@@ -180,7 +181,8 @@
                 renderMessages(messages);
             }, (error) => {
                 console.error("Fout bij het laden van berichten:", error);
-                document.getElementById('loading-indicator').textContent = "Fout: Berichten konden niet geladen worden. Controleer de regels.";
+                // Dit is de plek waar eventuele toestemmingsfouten worden getoond
+                document.getElementById('loading-indicator').textContent = "Fout: Berichten konden niet geladen worden. Controleer de regels. Foutmelding: " + error.message;
             });
         }
         
