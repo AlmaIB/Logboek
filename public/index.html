@@ -34,7 +34,7 @@
                                 class="w-full p-3 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150" required>
                         
                         <textarea type="text" id="message-text" placeholder="Uw Bericht (max 200 tekens)" maxlength="200" rows="4"
-                                    class="w-full p-3 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 resize-none" required></textarea>
+                                         class="w-full p-3 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 resize-none" required></textarea>
                         
                         <button type="submit" id="submit-button"
                                 class="w-full py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition duration-200 shadow-md hover:shadow-lg disabled:opacity-50"
@@ -189,15 +189,21 @@
          */
         function renderMessages(messages) {
             const listContainer = document.getElementById('message-list');
+            const loadingIndicator = document.getElementById('loading-indicator'); // <-- Haal de indicator op
+            
             listContainer.innerHTML = ''; 
 
             if (messages.length === 0) {
                 listContainer.innerHTML = '<p class="text-center text-gray-500 p-4 bg-gray-50 rounded-lg">Er zijn nog geen berichten. Wees de eerste!</p>';
-                document.getElementById('loading-indicator').style.display = 'none';
+                if (loadingIndicator) { // ✅ FAILSAFE 1: Voorkom TypeError bij null
+                    loadingIndicator.style.display = 'none';
+                }
                 return;
             }
             
-            document.getElementById('loading-indicator').style.display = 'none';
+            if (loadingIndicator) { // ✅ FAILSAFE 2: Voorkom TypeError bij null
+                loadingIndicator.style.display = 'none';
+            }
 
             messages.forEach(msg => {
                 const timeString = msg.timestamp.toLocaleString('nl-NL', { 
