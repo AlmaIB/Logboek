@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Digitaal Gastenboek FIX V5</title>
-    <!-- Laad Tailwind CSS voor styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Aangepaste styling */
-        #message-list { max-height: 60vh; overflow-y: auto; scroll-behavior: smooth; border-radius: 0.75rem; padding-right: 0.5rem; }
+        /* FIX: 'scroll-behavior: smooth;' is verwijderd voor een snellere UI */
+        #message-list { max-height: 60vh; overflow-y: auto; border-radius: 0.75rem; padding-right: 0.5rem; }
         #message-list::-webkit-scrollbar { width: 8px; }
         #message-list::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
         #message-list::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -26,16 +26,15 @@
             </header>
 
             <div class="grid md:grid-cols-3 gap-8">
-                <!-- Berichten Formulier -->
                 <div class="md:col-span-1">
                     <h2 class="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">Laat een Bericht Achter</h2>
                     
                     <form id="message-form" class="space-y-4 p-4 bg-blue-50 rounded-lg shadow-inner">
                         <input type="text" id="name" placeholder="Uw Naam (optioneel)" maxlength="50"
-                               class="w-full p-3 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150" required>
+                                class="w-full p-3 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150" required>
                         
                         <textarea type="text" id="message-text" placeholder="Uw Bericht (max 200 tekens)" maxlength="200" rows="4"
-                                  class="w-full p-3 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 resize-none" required></textarea>
+                                    class="w-full p-3 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 resize-none" required></textarea>
                         
                         <button type="submit" id="submit-button"
                                 class="w-full py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition duration-200 shadow-md hover:shadow-lg disabled:opacity-50"
@@ -44,7 +43,6 @@
                         </button>
                     </form>
                     
-                    <!-- Gebruikers-ID sectie -->
                     <div class="mt-8 p-4 bg-gray-100 rounded-lg shadow-md">
                         <div class="text-xs text-gray-500 break-words">
                             <span class="font-bold">Uw unieke gebruikers-ID:</span> 
@@ -53,20 +51,17 @@
                     </div>
                 </div>
 
-                <!-- Berichten Lijst -->
                 <div class="md:col-span-2">
                     <h2 class="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">Alle Berichten</h2>
                     <div id="message-list" class="space-y-4">
                         <p id="loading-indicator" class="text-center text-gray-500 p-4">Laden van berichten...</p>
-                        <!-- Berichten worden hier dynamisch ingevoegd -->
-                    </div>
+                        </div>
                 </div>
             </div>
 
         </div>
     </div>
 
-    <!-- Firebase SDK's en App Logica -->
     <script type="module">
         // Importeer de Realtime Database SDK's en Auth
         import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -79,14 +74,17 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
-        // DE HARCODED EN CORRECTE Firebase configuratie (NU 100% BEVESTIGD)
+        // DE HARCODED EN CORRECTE Firebase configuratie
         const firebaseConfig = {
-          apiKey: "AIzaSyAoelqc3Egk7_aIdH9_RmlSmiIb7KtOqzs", 
-          authDomain: "logboek-actie-protest.firebaseapp.com",
-          projectId: "logboek-actie-protest",
-          storageBucket: "logboek-actie-protest.firebasestorage.app",
-          messagingSenderId: "266224047697",
-          appId: "1:266224047697:web:9dbb766ff3e3a092ee0a70"
+        apiKey: "AIzaSyAoelqc3Egk7_aIdH9_RmlSmiIb7KtOqzs", 
+        authDomain: "logboek-actie-protest.firebaseapp.com",
+        projectId: "logboek-actie-protest",
+        storageBucket: "logboek-actie-protest.firebasestorage.app",
+        messagingSenderId: "266224047697",
+        appId: "1:266224047697:web:9dbb766ff3e3a092ee0a70",
+        
+        // ✅ FIX 1: Regionale URL in de configuratie
+        databaseURL: "https://logboek-actie-protest-default-rtdb.europe-west1.firebasedatabase.app"
         };
 
 
@@ -102,7 +100,8 @@
         setLogLevel('debug');
 
         const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app); 
+        // ✅ FIX 2: Forceren van de regionale URL bij de initialisatie van de database om de hardnekkige browserfout te omzeilen.
+        const db = getDatabase(app, "https://logboek-actie-protest-default-rtdb.europe-west1.firebasedatabase.app");
         const auth = getAuth(app);
 
         let currentUserId = null;
@@ -251,9 +250,10 @@
                     userId: currentUserId 
                 });
 
+                // ✅ FIX 3: Wis het formulier meteen en verwijder de succes pop-up.
                 document.getElementById('name').value = ''; 
                 document.getElementById('message-text').value = '';
-                showModal("Succes!", "Je bericht is succesvol geplaatst.");
+                // showModal("Succes!", "Je bericht is succesvol geplaatst."); <-- Deze is nu verwijderd.
                 
             } catch (error) {
                 console.error("Fout bij het plaatsen van bericht:", error);
@@ -268,7 +268,7 @@
         // --- Utility Functies (Custom Modal, Sanitizer) ---
         
         /** * Voegt een eenvoudige modale dialoog toe aan de body voor meldingen (in plaats van alert()).
-         */
+          */
         function showModal(title, message) {
             const existingModal = document.getElementById('custom-modal');
             if (existingModal) existingModal.remove();
@@ -299,7 +299,8 @@
         }
 
         // --- Start de Applicatie ---
-        window.onload = initializeAuthAndDatabase;
+        // 🛠️ OPLOSSING 2: Directe aanroep in plaats van window.onload
+        initializeAuthAndDatabase();
 
     </script>
 
